@@ -2,33 +2,421 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>読書ログアプリ</title>
-    <link rel="stylesheet" href="/src/css/style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book-meter - ホーム</title>
+    <style>
+        /* === 全体の基本設定 === */
+        :root {
+            --primary-color: #4a90e2;
+            --primary-rgba: rgba(74, 144, 226, 0.4);
+            --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
+            --text-main: #333333;
+            --text-sub: #777777;
+        }
+        body { font-family: 'Helvetica Neue', Arial, sans-serif; background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 0; }
+        a { text-decoration: none; color: var(--primary-color); }
+        a:hover { text-decoration: underline; }
+
+        /* === ヘッダー === */
+        header { background-color: var(--card-bg); padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        header h1 { margin: 0; font-size: 1.5rem; color: var(--primary-color); }
+        .user-controls { display: flex; align-items: center; gap: 15px; font-size: 0.9rem; }
+        .rank-badge { background-color: #ffd700; color: #b8860b; padding: 4px 10px; border-radius: 12px; font-weight: bold; font-size: 0.85rem; }
+        .header-btn { padding: 6px 12px; border: 1px solid #ddd; background: #fff; border-radius: 4px; cursor: pointer; transition: 0.2s; }
+        .header-btn:hover { background: #f0f0f0; }
+
+        /* === メインコンテンツ === */
+        main { max-width: 1000px; margin: 0 auto 40px; padding: 0 20px; }
+        
+        /* 🌟 セクションヘッダー（スクロール時に上部に固定される） */
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            /* スクロール追従の魔法 */
+            position: sticky;
+            top: 0;
+            background-color: var(--bg-color); /* 背景を透過させない */
+            padding: 20px 0 10px 0;
+            z-index: 100;
+            border-bottom: 2px solid #ddd;
+        }
+        .section-header h2 { font-size: 1.3rem; margin: 0; }
+        
+        /* コンパクトになった追加ボタン */
+        .add-btn-small {
+            background-color: #4CAF50;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 0.95rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: 0.2s;
+        }
+        .add-btn-small:hover { background-color: #45a049; text-decoration: none; transform: translateY(-1px); }
+
+        /* === 本棚（2列縦スクロール）エリア === */
+        .book-list {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr); /* 常に2列 */
+            gap: 20px;
+        }
+        
+        /* 📱 スマホ時は1列にする */
+        @media (max-width: 768px) {
+            .book-list { grid-template-columns: 1fr; }
+        }
+
+        .book-card { background-color: var(--card-bg); border-radius: 8px; padding: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); display: flex; gap: 15px; }
+        .book-cover { width: 80px; height: 115px; background-color: #eee; object-fit: cover; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .book-info { flex: 1; display: flex; flex-direction: column; justify-content: space-between; min-width: 0; }
+        .book-title { font-size: 1.1rem; font-weight: bold; margin: 0 0 5px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        
+        .book-meta { font-size: 0.85rem; color: var(--text-sub); margin: 0 0 10px 0; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; line-height: 1.4; }
+        .book-author::before { content: '👤 '; }
+        .book-publisher::before { content: '🏢 '; }
+        
+        /* レンジ進捗バー */
+        .progress-container { margin-bottom: 15px; }
+        .progress-text { font-size: 0.8rem; color: var(--text-sub); margin-bottom: 4px; display: block; text-align: right;}
+        .range-bar-wrapper { position: relative; width: 100%; height: 12px; background-color: #eee; border-radius: 6px; overflow: hidden; }
+        .range-segment { position: absolute; top: 0; height: 100%; background-color: var(--primary-rgba); border-radius: 2px; }
+
+        /* 入力フォーム */
+        .progress-input-group { display: flex; gap: 5px; align-items: center; }
+        .progress-input-group input { width: 60px; padding: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; text-align: center; }
+        .progress-input-group span { color: var(--text-sub); font-weight: bold; }
+        .progress-input-group button { flex: 1; background-color: var(--primary-color); color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .progress-input-group button:hover { background-color: #357abd; }
+        
+        .see-more { text-align: right; margin-top: 20px; }
+        .see-more a { font-weight: bold; font-size: 1.1rem; }
+    </style>
 </head>
 <body>
-    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 20px;">
-        <h1 style="margin: 0;">book-metter</h1>
-        <button onclick="logout()" style="background-color: #ff4757; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; font-weight: bold;">ログアウト</button>
-    </div>
-    
-    <div id="user-info">
-            <p>ようこそ、<span id="user-name" style="font-weight: bold; color: #4a90e2;">読込中...</span> さん！ (ID: <span id="user-id"></span>)</p>
-            <button onclick="fetchBooks()">本の一覧を更新</button>
-    </div>
 
-    <div id="add-book-form" style="border: 1px solid #2ecc71; padding: 15px; margin: 10px; border-radius: 8px; background: #eafff2;">
-        <h3>📚 新しい本を登録</h3>
-            タイトル: <input type="text" id="book-title" placeholder="吾輩は猫である">
-            総ページ数: <input type="number" id="book-pages" placeholder="300">
-            目標完了日: <input type="date" id="book-target">
-        <button onclick="submitNewBook()" style="background-color: #2ecc71;">本を追加する</button>
-    </div>
-
-    <div id="book-list">
+    <header>
+        <div class="logo"><h1>📚 Book-meter</h1></div>
+        <div class="user-controls">
+            <span class="rank-badge">🏆 シルバーリーダー</span>
+            <span>ID: test_user</span>
+            <button class="header-btn" onclick="logout()">ログアウト</button>
         </div>
+    </header>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="/src/js/api.js"></script>
-    <script src="/src/js/main.js"></script>
+    <main>
+        <section id="recent-books-section">
+            
+            <div class="section-header">
+                <h2>📖 最近の読書</h2>
+                <a href="add-book.html" class="add-btn-small">＋ 新しい本を追加</a>
+            </div>
+            
+            <div class="book-list">
+                
+                <div class="book-card">
+                    <img src="https://ndlsearch.ndl.go.jp/thumbnail/9784873115795.jpg" alt="書影" class="book-cover">
+                    <div class="book-info">
+                        <div>
+                            <h3 class="book-title"><a href="book-detail.html?id=1">アート・オブ・Rプログラミング</a></h3>
+                            <div class="book-meta">
+                                <span class="book-author">Norman Matloff...他</span>
+                                <span class="book-publisher">オライリー・ジャパン</span>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="progress-container">
+                                <span class="progress-text">実質読了: 160 / 367 P</span>
+                                <div class="range-bar-wrapper" data-total="367" data-logs='[{"s":0, "e":100}, {"s":80, "e":150}, {"s":130, "e":200}]'></div>
+                            </div>
+                            <div class="progress-input-group">
+                                <input type="number" placeholder="開始" min="1" max="367"> <span>〜</span> <input type="number" placeholder="終了" min="1" max="367">
+                                <button type="button">記録</button>
+                            </div>
+                        </div>
+                    </div>
+                </div> 
+
+                <div class="book-card">
+                    <img src="https://ndlsearch.ndl.go.jp/thumbnail/9784873115658.jpg" alt="書影" class="book-cover">
+                    <div class="book-info">
+                        <div>
+                            <h3 class="book-title"><a href="book-detail.html?id=2">リーダブルコード</a></h3>
+                            <div class="book-meta">
+                                <span class="book-author">Dustin Boswell, Trevor Foucher</span>
+                                <span class="book-publisher">オライリー・ジャパン</span>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="progress-container">
+                                <span class="progress-text">実質読了: 100 / 237 P</span>
+                                <div class="range-bar-wrapper" data-total="237" data-logs='[{"s":0, "e":50}, {"s":150, "e":200}]'></div>
+                            </div>
+                            <div class="progress-input-group">
+                                <input type="number" placeholder="開始" min="1" max="237"> <span>〜</span> <input type="number" placeholder="終了" min="1" max="237">
+                                <button type="button">記録</button>
+                            </div>
+                        </div>
+                    </div>
+                </div> 
+
+                <div class="book-card">
+                    <img src="https://ndlsearch.ndl.go.jp/thumbnail/9784274226208.jpg" alt="書影" class="book-cover">
+                    <div class="book-info">
+                        <div>
+                            <h3 class="book-title"><a href="book-detail.html?id=3">達人プログラマー(第2版)</a></h3>
+                            <div class="book-meta">
+                                <span class="book-author">David Thomas, Andrew Hunt</span>
+                                <span class="book-publisher">オーム社</span>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="progress-container">
+                                <span class="progress-text">実質読了: 40 / 336 P</span>
+                                <div class="range-bar-wrapper" data-total="336" data-logs='[{"s":0, "e":40}]'></div>
+                            </div>
+                            <div class="progress-input-group">
+                                <input type="number" placeholder="開始" min="1" max="336"> <span>〜</span> <input type="number" placeholder="終了" min="1" max="336">
+                                <button type="button">記録</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>                        
+
+                <div class="book-card">
+                    <img src="https://ndlsearch.ndl.go.jp/thumbnail/9784798150727.jpg" alt="書影" class="book-cover">
+                    <div class="book-info">
+                        <div>
+                            <h3 class="book-title"><a href="book-detail.html?id=4">ドメイン駆動設計入門</a></h3>
+                            <div class="book-meta">
+                                <span class="book-author">成瀬 允宣</span>
+                                <span class="book-publisher">翔泳社</span>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="progress-container">
+                                <span class="progress-text">実質読了: 336 / 336 P (読了🎉)</span>
+                                <div class="range-bar-wrapper" data-total="336" data-logs='[{"s":0, "e":336}]'></div>
+                            </div>
+                            <div class="progress-input-group">
+                                <input type="number" placeholder="開始" disabled> <span>〜</span> <input type="number" placeholder="終了" disabled>
+                                <button type="button" disabled style="background-color: #ccc;">記録</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="book-card">
+                    <img src="https://ndlsearch.ndl.go.jp/thumbnail/9784873115795.jpg" alt="書影" class="book-cover">
+                    <div class="book-info">
+                        <div>
+                            <h3 class="book-title"><a href="book-detail.html?id=1">アート・オブ・Rプログラミング</a></h3>
+                            <div class="book-meta">
+                                <span class="book-author">Norman Matloff...他</span>
+                                <span class="book-publisher">オライリー・ジャパン</span>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="progress-container">
+                                <span class="progress-text">実質読了: 160 / 367 P</span>
+                                <div class="range-bar-wrapper" data-total="367" data-logs='[{"s":0, "e":100}, {"s":80, "e":150}, {"s":130, "e":200}]'></div>
+                            </div>
+                            <div class="progress-input-group">
+                                <input type="number" placeholder="開始" min="1" max="367"> <span>〜</span> <input type="number" placeholder="終了" min="1" max="367">
+                                <button type="button">記録</button>
+                            </div>
+                        </div>
+                    </div>
+                </div> 
+
+                <div class="book-card">
+                    <img src="https://ndlsearch.ndl.go.jp/thumbnail/9784873115658.jpg" alt="書影" class="book-cover">
+                    <div class="book-info">
+                        <div>
+                            <h3 class="book-title"><a href="book-detail.html?id=2">リーダブルコード</a></h3>
+                            <div class="book-meta">
+                                <span class="book-author">Dustin Boswell, Trevor Foucher</span>
+                                <span class="book-publisher">オライリー・ジャパン</span>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="progress-container">
+                                <span class="progress-text">実質読了: 100 / 237 P</span>
+                                <div class="range-bar-wrapper" data-total="237" data-logs='[{"s":0, "e":50}, {"s":150, "e":200}]'></div>
+                            </div>
+                            <div class="progress-input-group">
+                                <input type="number" placeholder="開始" min="1" max="237"> <span>〜</span> <input type="number" placeholder="終了" min="1" max="237">
+                                <button type="button">記録</button>
+                            </div>
+                        </div>
+                    </div>
+                </div> 
+
+                <div class="book-card">
+                    <img src="https://ndlsearch.ndl.go.jp/thumbnail/9784274226208.jpg" alt="書影" class="book-cover">
+                    <div class="book-info">
+                        <div>
+                            <h3 class="book-title"><a href="book-detail.html?id=3">達人プログラマー(第2版)</a></h3>
+                            <div class="book-meta">
+                                <span class="book-author">David Thomas, Andrew Hunt</span>
+                                <span class="book-publisher">オーム社</span>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="progress-container">
+                                <span class="progress-text">実質読了: 40 / 336 P</span>
+                                <div class="range-bar-wrapper" data-total="336" data-logs='[{"s":0, "e":40}]'></div>
+                            </div>
+                            <div class="progress-input-group">
+                                <input type="number" placeholder="開始" min="1" max="336"> <span>〜</span> <input type="number" placeholder="終了" min="1" max="336">
+                                <button type="button">記録</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>                        
+
+                <div class="book-card">
+                    <img src="https://ndlsearch.ndl.go.jp/thumbnail/9784798150727.jpg" alt="書影" class="book-cover">
+                    <div class="book-info">
+                        <div>
+                            <h3 class="book-title"><a href="book-detail.html?id=4">ドメイン駆動設計入門</a></h3>
+                            <div class="book-meta">
+                                <span class="book-author">成瀬 允宣</span>
+                                <span class="book-publisher">翔泳社</span>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="progress-container">
+                                <span class="progress-text">実質読了: 336 / 336 P (読了🎉)</span>
+                                <div class="range-bar-wrapper" data-total="336" data-logs='[{"s":0, "e":336}]'></div>
+                            </div>
+                            <div class="progress-input-group">
+                                <input type="number" placeholder="開始" disabled> <span>〜</span> <input type="number" placeholder="終了" disabled>
+                                <button type="button" disabled style="background-color: #ccc;">記録</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="book-card">
+                    <img src="https://ndlsearch.ndl.go.jp/thumbnail/9784873115795.jpg" alt="書影" class="book-cover">
+                    <div class="book-info">
+                        <div>
+                            <h3 class="book-title"><a href="book-detail.html?id=1">アート・オブ・Rプログラミング</a></h3>
+                            <div class="book-meta">
+                                <span class="book-author">Norman Matloff...他</span>
+                                <span class="book-publisher">オライリー・ジャパン</span>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="progress-container">
+                                <span class="progress-text">実質読了: 160 / 367 P</span>
+                                <div class="range-bar-wrapper" data-total="367" data-logs='[{"s":0, "e":100}, {"s":80, "e":150}, {"s":130, "e":200}]'></div>
+                            </div>
+                            <div class="progress-input-group">
+                                <input type="number" placeholder="開始" min="1" max="367"> <span>〜</span> <input type="number" placeholder="終了" min="1" max="367">
+                                <button type="button">記録</button>
+                            </div>
+                        </div>
+                    </div>
+                </div> 
+
+                <div class="book-card">
+                    <img src="https://ndlsearch.ndl.go.jp/thumbnail/9784873115658.jpg" alt="書影" class="book-cover">
+                    <div class="book-info">
+                        <div>
+                            <h3 class="book-title"><a href="book-detail.html?id=2">リーダブルコード</a></h3>
+                            <div class="book-meta">
+                                <span class="book-author">Dustin Boswell, Trevor Foucher</span>
+                                <span class="book-publisher">オライリー・ジャパン</span>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="progress-container">
+                                <span class="progress-text">実質読了: 100 / 237 P</span>
+                                <div class="range-bar-wrapper" data-total="237" data-logs='[{"s":0, "e":50}, {"s":150, "e":200}]'></div>
+                            </div>
+                            <div class="progress-input-group">
+                                <input type="number" placeholder="開始" min="1" max="237"> <span>〜</span> <input type="number" placeholder="終了" min="1" max="237">
+                                <button type="button">記録</button>
+                            </div>
+                        </div>
+                    </div>
+                </div> 
+
+                <div class="book-card">
+                    <img src="https://ndlsearch.ndl.go.jp/thumbnail/9784274226208.jpg" alt="書影" class="book-cover">
+                    <div class="book-info">
+                        <div>
+                            <h3 class="book-title"><a href="book-detail.html?id=3">達人プログラマー(第2版)</a></h3>
+                            <div class="book-meta">
+                                <span class="book-author">David Thomas, Andrew Hunt</span>
+                                <span class="book-publisher">オーム社</span>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="progress-container">
+                                <span class="progress-text">実質読了: 40 / 336 P</span>
+                                <div class="range-bar-wrapper" data-total="336" data-logs='[{"s":0, "e":40}]'></div>
+                            </div>
+                            <div class="progress-input-group">
+                                <input type="number" placeholder="開始" min="1" max="336"> <span>〜</span> <input type="number" placeholder="終了" min="1" max="336">
+                                <button type="button">記録</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>                        
+
+                <div class="book-card">
+                    <img src="https://ndlsearch.ndl.go.jp/thumbnail/9784798150727.jpg" alt="書影" class="book-cover">
+                    <div class="book-info">
+                        <div>
+                            <h3 class="book-title"><a href="book-detail.html?id=4">ドメイン駆動設計入門</a></h3>
+                            <div class="book-meta">
+                                <span class="book-author">成瀬 允宣</span>
+                                <span class="book-publisher">翔泳社</span>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="progress-container">
+                                <span class="progress-text">実質読了: 336 / 336 P (読了🎉)</span>
+                                <div class="range-bar-wrapper" data-total="336" data-logs='[{"s":0, "e":336}]'></div>
+                            </div>
+                            <div class="progress-input-group">
+                                <input type="number" placeholder="開始" disabled> <span>〜</span> <input type="number" placeholder="終了" disabled>
+                                <button type="button" disabled style="background-color: #ccc;">記録</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            
+            <div class="see-more">
+                <a href="bookshelf.html">📚 本棚をもっと見る ＞</a>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const wrappers = document.querySelectorAll('.range-bar-wrapper');
+            wrappers.forEach(wrapper => {
+                const totalPages = parseInt(wrapper.getAttribute('data-total'));
+                const logs = JSON.parse(wrapper.getAttribute('data-logs') || '[]');
+                logs.forEach(log => {
+                    const startPercent = (log.s / totalPages) * 100;
+                    const widthPercent = ((log.e - log.s) / totalPages) * 100;
+                    const segment = document.createElement('div');
+                    segment.className = 'range-segment';
+                    segment.style.left = `${startPercent}%`;
+                    segment.style.width = `${widthPercent}%`;
+                    wrapper.appendChild(segment);
+                });
+            });
+        });
+        function logout() { alert('ログアウト処理を記述します'); }
+    </script>
 </body>
 </html>
