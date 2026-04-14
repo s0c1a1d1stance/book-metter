@@ -31,8 +31,11 @@ class User(Base):
     username = Column(String, unique=True, index=True) # unique=True で同じ名前の登録を弾く
     password_hash = Column(String) # パスワードは暗号化（ハッシュ化）して保存します。
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    last_login = Column(DateTime(timezone=True))
+    email = Column(String)
+    rank = Column(Integer, default=0)
     # user.books で「このユーザーが登録している本のリスト」にアクセスできるようにします。
-    books = relationship("Book", back_populates="owner")
+    # books = relationship("Book", back_populates="owner")
 
 #=========================================#
 # 本（Book）のテーブル設計図
@@ -43,6 +46,7 @@ class Book(Base):
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, index=True)
     total_pages = Column(Integer)
+    preamble = Column(Integer)
     target_date = Column(String, nullable=True)
     
     # ▼ API (国立国会図書館) から取得する情報 ▼
@@ -54,35 +58,35 @@ class Book(Base):
     ndl_link = Column(String, nullable=True)       # 国会図書館のリンク (link)
     cover_url = Column(String, nullable=True)      # 書影画像URL (ISBNをもとにフロント側やAPI側で生成)
 
-    # ▼ アプリ独自の管理情報 ▼
-    status = Column(String, default="未読")         # ステータス（未読, 読書中, 読了）
+    # # ▼ アプリ独自の管理情報 ▼
+    # status = Column(String, default="未読")         # ステータス（未読, 読書中, 読了）
 
-    # タイムスタンプ
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    # # タイムスタンプ
+    # created_at = Column(DateTime(timezone=True), server_default=func.now())
+    # updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
  
-    # ▼ 他のテーブルとの紐づけ（リレーション） ▼
-    # 「誰の本か？」を示すために、usersテーブルのidを外部キーとして保存します
-    user_id = Column(Integer, ForeignKey("users.id"))
-    # book.owner で「この本の持ち主（User）」にアクセスできるようにします。
-    owner = relationship("User", back_populates="books")
-    # book.progress_logs で「この本の進捗ログのリスト」にアクセスできるようにします。
-    progress_logs = relationship("ProgressLog", back_populates="book")
+    # # ▼ 他のテーブルとの紐づけ（リレーション） ▼
+    # # 「誰の本か？」を示すために、usersテーブルのidを外部キーとして保存します
+    # user_id = Column(Integer, ForeignKey("users.id"))
+    # # book.owner で「この本の持ち主（User）」にアクセスできるようにします。
+    # owner = relationship("User", back_populates="books")
+    # # book.progress_logs で「この本の進捗ログのリスト」にアクセスできるようにします。
+    # progress_logs = relationship("ProgressLog", back_populates="book")
 
 #=========================================#
 # 読書進捗ログ（ProgressLog）のテーブル設計図
 #=========================================#
-class ProgressLog(Base):
-    __tablename__ = "progress_logs"
-    # 「どの本の進捗か？」を示すために、booksテーブルのidを外部キーとして保存します
-    id = Column(Integer, primary_key=True, index=True)
-    date = Column(String)
-    book_id = Column(Integer, ForeignKey("books.id"))
+# class ProgressLog(Base):
+#     __tablename__ = "progress_logs"
+#     # 「どの本の進捗か？」を示すために、booksテーブルのidを外部キーとして保存します
+#     id = Column(Integer, primary_key=True, index=True)
+#     date = Column(String)
+#     book_id = Column(Integer, ForeignKey("books.id"))
     
-    start_page = Column(Integer)  
-    end_page = Column(Integer)    
-    memo = Column(Text, nullable=True) # メモも長くなる可能性があるのでText型がおすすめ
+#     start_page = Column(Integer)  
+#     end_page = Column(Integer)    
+#     memo = Column(Text, nullable=True) # メモも長くなる可能性があるのでText型がおすすめ
     
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    #progress.book で「この進捗が属する本（Book）」にアクセスできるようにします。
-    book = relationship("Book", back_populates="progress_logs")
+#     created_at = Column(DateTime(timezone=True), server_default=func.now())
+#     #progress.book で「この進捗が属する本（Book）」にアクセスできるようにします。
+#     book = relationship("Book", back_populates="progress_logs")
