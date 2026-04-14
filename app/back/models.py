@@ -78,7 +78,7 @@ class Progress(Base):
     id = Column(Integer, primary_key=True, index=True)
     group_id = Column(Integer, ForeignKey("groups.id"))
     user_id = Column(Integer, ForeignKey("users.id"))
-    progress_memo = Column(String)
+    progress_memo = Column(String, nullable=True)
     start_page = Column(Integer)
     end_page = Column(Integer)
 
