@@ -55,7 +55,6 @@ class Book(Base):
     self_link = Column(String, nullable=True)      # Google Booksのリンク (link)
     api_id = Column(String)                        # jsonのkindの中のid
     api_etag = Column(String)                      # jsonのkindの中のetag
-    description = Column(Text, nullable=True)      # 本の説明文書
     small_cover_url = Column(String, nullable=True)# 小さい書影画像のURL
     cover_url = Column(String, nullable=True)      # 書影画像のURL
 
@@ -86,7 +85,7 @@ class Progress(Base):
     progress_memo = Column(String, nullable=True) #進捗追加の際に書くメモ
     start_page = Column(Integer) 
     end_page = Column(Integer)
-
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
     group = relationship("Group", back_populates="progresses")
     #user = relationship("User", back_populates="progresses")
 
@@ -116,7 +115,7 @@ class Memo(Base):
     group_id = Column(Integer, ForeignKey("groups.id"))
     user_id = Column(Integer, ForeignKey("users.id"))
     location = Column(Integer)
-    created = Column(DateTime(timezone=True), server_default=func.now())
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
     text = Column(Text)
 
 # レジュメテーブル．輪講資料に関するテーブル．
@@ -128,5 +127,5 @@ class Resume(Base):
     group_id = Column(Integer, ForeignKey("groups.id"))
     user_id = Column(Integer, ForeignKey("users.id"))
     location = Column(Integer)
-    created = Column(DateTime(timezone=True), server_default=func.now())
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
     url = Column(String)

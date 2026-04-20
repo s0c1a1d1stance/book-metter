@@ -36,10 +36,9 @@ from datetime import datetime
 # 1. Base (共通基盤)
 # ユーザーが進捗ログを作成・更新する際に必要な情報のうち、共通するデータを記述したクラス
 class ProgressBase(BaseModel):
-    date: str
     start_page: int
     end_page: int
-    memo: Optional[str] = None
+    progress_memo: Optional[str] = None
 # 2. Create (登録リクエスト用)
 # 進捗を新規登録する際に受け取るデータの形です。今回はBaseと全く同じ項目で良いため、そのまま継承しています。
 class ProgressCreate(ProgressBase):
@@ -49,9 +48,18 @@ class ProgressCreate(ProgressBase):
 # Baseの項目に加え、DB側で自動採番・記録される id や created_at などを追加しています。
 class Progress(ProgressBase):
     id: int
-    book_id: int
+    group_id: int
+    user_id: int
     created_at: Optional[datetime] = None 
 
+    @computed_field
+    def total_read_pages(self) -> int:
+        from .crud import calculate_total_progress
+        # ログが空の場合の安全策
+        if not self.progress_logs:
+            return 0
+        return calculate_total_progress(self.progress_logs)
+    
     class Config:
         from_attributes = True # DBから取得したオブジェクトをそのままJSONに変換するための設定
 
@@ -63,33 +71,79 @@ class Progress(ProgressBase):
 class BookBase(BaseModel):
     title: str
     total_pages: int
-    target_date: Optional[str] = None  # 目標日が未定の場合に備えてOptionalに
+    #target_date: Optional[str] = None  # 目標日が未定の場合に備えてOptionalに
 
     # 外部APIから取得できなかった場合に備えてOptionalにしている
     author: Optional[str] = None
     publisher: Optional[str] = None
-    published_year: Optional[str] = None
-    isbn: Optional[str] = None
+    published_date: Optional[str] = None
     description: Optional[str] = None
-    ndl_link: Optional[str] = None
+    self_link: Optional[str] = None
+    api_id: Optional[str] = None
+    api_etag: Optional[str] = None
+    small_cover_url: Optional[str] = None
     cover_url: Optional[str] = None
-    status: str = "未読"
+
 
 # 2. Create (登録リクエスト用)
 # ユーザーが新しい本を登録する際に、フロントエンドから受け取るデータの形です。
 # Baseの項目に加え、「誰の本として登録するか」を指定するために user_id が必須になっています。
 # （※この時点ではまだDBに保存されていないため、id はありません）
 class BookCreate(BookBase):
-    user_id: int
+    pass
 
 # 3. DB取得・レスポンス用
 # データベースから取得した本データを、フロントエンドに返す際のデータの形です。
 # Baseの項目に加え、DB側で自動生成される id やタイムスタンプ、紐づく進捗ログなどを追加します。
 class Book(BookBase):
     id: int
-    user_id: int
-    created_at: Optional[datetime] = None  
-    updated_at: Optional[datetime] = None  #ホーム画面の「最近の20件」の並び替えに必須！
+
+    class Config:
+        from_attributes = True
+
+#=========================================#
+# ユーザー（User）に関するクラス定義
+#=========================================#
+# 1. Base (共通基盤)
+# ユーザーに関するデータで、リクエスト・レスポンス問わず共通して使う項目です。
+class UserBase(BaseModel):
+    username: str
+    email: str
+
+# 2. Create (登録リクエスト用)
+# アカウントの新規登録時に、フロントエンドから送られてくるデータの形です。
+# Baseの項目(username)に加え、登録時に必須となる password をここで受け取ります。
+# （※パスワードを受け取るのは「このクラスだけ」に限定します）
+class UserCreate(UserBase):
+    password_hash: str
+
+# 3. DB取得・レスポンス用
+# データベースから取得したユーザー情報をフロントエンドに返す際のデータの形です。
+# このクラスには password を含めていません！
+# これにより、APIのレスポンスに誤ってパスワードが混入し、画面側に漏洩する事故を防いでいます。
+class User(UserBase):
+    id: int # DBが自動採番したユーザーID
+    created_at: Optional[datetime] = None #アカウント作成日時
+    last_login: Optional[datetime] = None
+
+    #books: List[Book] = []
+    # 関連データの入れ子（ネスト）
+    # このユーザーが登録している「本」のリスト（Bookスキーマの配列）をまとめて返します。
+    # ユーザーのマイページなどを表示する際に、本の一覧も一緒に取得する際に利用。
+
+    class Config:
+        from_attributes = True
+
+class GroupBase(BaseModel):
+    name: str
+    
+
+class GroupCreate(GroupBase):
+    pass
+
+class Group(GroupBase):
+    id: int
+    book_id: int
     progress_logs: List[Progress] = []
 
     # APIがBookを返す時に、自動で「実質の合計ページ」を計算して含める
@@ -102,37 +156,49 @@ class Book(BookBase):
         return calculate_total_progress(self.progress_logs)
 
     class Config:
-        from_attributes = True
+        from_attributes = True # DBから取得したオブジェクトをそのままJSONに変換するための設定
 
-#=========================================#
-# ユーザー（User）に関するクラス定義
-#=========================================#
-# 1. Base (共通基盤)
-# ユーザーに関するデータで、リクエスト・レスポンス問わず共通して使う項目です。
-class UserBase(BaseModel):
-    username: str
+class GroupMemberBase(BaseModel):
+    pass
 
-# 2. Create (登録リクエスト用)
-# アカウントの新規登録時に、フロントエンドから送られてくるデータの形です。
-# Baseの項目(username)に加え、登録時に必須となる password をここで受け取ります。
-# （※パスワードを受け取るのは「このクラスだけ」に限定します）
-class UserCreate(UserBase):
-    password: str
+class GroupMemberCreate(GroupMemberBase):
+    pass
 
-# 3. DB取得・レスポンス用
-# データベースから取得したユーザー情報をフロントエンドに返す際のデータの形です。
-# このクラスには password を含めていません！
-# これにより、APIのレスポンスに誤ってパスワードが混入し、画面側に漏洩する事故を防いでいます。
-class User(UserBase):
-    id: int # DBが自動採番したユーザーID
-    created_at: Optional[datetime] = None #アカウント作成日時
-    books: List[Book] = []
-    # 関連データの入れ子（ネスト）
-    # このユーザーが登録している「本」のリスト（Bookスキーマの配列）をまとめて返します。
-    # ユーザーのマイページなどを表示する際に、本の一覧も一緒に取得する際に利用。
-    books: List[Book] = []
+class GroupMember(GroupMemberBase):
+    group_id: int
+    user_id: int
 
     class Config:
-        from_attributes = True
+        from_attributes = True # DBから取得したオブジェクトをそのままJSONに変換するための設定
 
-        
+class MemoBase(BaseModel):
+    location: int
+    text: Optional[str] = None
+    
+class MemoCreate(MemoBase):
+    pass
+
+class Memo(MemoBase):
+    id: int
+    group_id: int
+    user_id: int
+    created_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True # DBから取得したオブジェクトをそのままJSONに変換するための設定
+
+class ResumeBase(BaseModel):
+    location: Optional[int] = None
+    url: Optional[str] = None
+    
+class ResumeCreate(ResumeBase):
+    pass
+
+class Resume(ResumeBase):
+    id: int
+    group_id: int
+    user_id: int
+    created_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True # DBから取得したオブジェクトをそのままJSONに変換するための設定
